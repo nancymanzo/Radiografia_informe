@@ -1,0 +1,905 @@
+---
+title: "Recetas"
+author: "Cero Desabasto"
+date: "2/3/2022"
+output: html_document
+---
+
+¿Cuántas recetas se han quedado sin surtir?
+
+```{r, include=F, warning=F, echo=F}
+library(readxl)
+library(viridis)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(tidyverse)
+library(DT)
+library(plotly)
+```
+# IMSS
+
+```{r, include=F, warning=F, echo=F}
+recetas_imss <- read_excel("recetas_imss.xlsx")
+
+recetas_imss %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("TOTAL",
+                        "SURTIDAS",
+                        "PARCIALES",
+                        "NEGADAS"))->pivot_imss
+
+  recetas_imss %>% 
+    group_by(AÑO) %>% 
+    filter(`OOAD/UMAE` %in% c("Nacional", "NACIONAL")) %>% 
+    summarise(Total=sum(TOTAL),
+              Surtidas=sum(SURTIDAS),
+              Parciales=sum(PARCIALES),
+              Negadas=sum(NEGADAS)) %>% 
+      pivot_longer(names_to="TIPO DE RECETA",
+                   values_to ="TOTAL",
+                   cols = c("Parciales", 
+                            "Negadas"))%>% 
+      ggplot(aes(x = AÑO, 
+                 y = TOTAL,
+                 fill= `TIPO DE RECETA`)) +
+      geom_col() +
+    geom_text(aes(x=AÑO,
+                  y=TOTAL,
+                  label=comma(TOTAL)),
+              colour="white", size=5.5,
+              hjust=.5, vjust=1, position=position_stack(.8))+
+      scale_fill_manual(
+        values = c(Negadas = "#A2E488",
+                   `Parciales` = "#51BC33")) + 
+      scale_y_continuous(labels = scales::comma) +  
+    
+    labs(x="", y="Total de recetas", fill="")+
+    scale_x_continuous(labels = function(x) str_wrap(x, width = 30)) +
+    
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          strip.background = element_rect(color="black", fill="white", size=1.5),
+          strip.placement = 'outside',
+          strip.background.x = element_blank(),
+          strip.text.x = element_text(size = 15, face = "bold", angle=0),
+          panel.grid.minor.x = element_blank(),
+          panel.spacing.x = unit(0,"line"),
+          axis.text.x = element_text(angle = 0, hjust=.5, size=15, face="bold"),
+          axis.text = element_text(size = 13, colour="black"),
+          axis.title.y = element_text(face = "bold", size=14),
+          legend.text=element_text(size=14))->figura9
+  
+  ggsave(figura9, filename = "figura9.png", width = 25, height = 15, units = "cm", dpi = 96)
+  
+
+pivot_imss %>% 
+  group_by(AÑO) %>% 
+  filter(`OOAD/UMAE` %in% c("Nacional","NACIONAL"),
+         !(`TIPO DE RECETA` %in% c("TOTAL", "SURTIDAS")))%>%
+  mutate(MES=case_when(
+    MES=="ENERO"~"ene",
+    MES=="FEBRERO"~"feb",
+    MES=="MARZO"~"mar",
+    MES=="ABRIL"~"abr",
+    MES=="MAYO"~"may",
+    MES=="JUNIO"~"jun",
+    MES=="JULIO"~"jul",
+    MES=="AGOSTO"~"ago",
+    MES=="SEPTIEMBRE"~"sep",
+    MES=="OCTUBRE"~"oct",
+    MES=="NOVIEMBRE"~"nov",
+    MES=="DICIEMBRE"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic")),
+    `TIPO DE RECETA`= case_when(
+    `TIPO DE RECETA`=="PARCIALES"~"Parciales",
+    `TIPO DE RECETA`=="NEGADAS"~"Negadas"))%>% 
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_y_continuous(labels = scales::comma) +  
+  scale_fill_manual(
+    values = c(Negadas = "#A2E488",
+               `Parciales` = "#51BC33"))+
+  labs(x="", y="Total de recetas", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="white", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 90, hjust=1, size=11),
+        axis.text = element_text(size = 11, colour="black"),
+        axis.title.y = element_text(face = "bold", size=14))-> figura10
+
+
+
+```
+
+
+```{r, include=F, warning=F, echo=F}
+
+ggsave(figura9, filename = "figura9.png", width = 25, height = 15, units = "cm", dpi = 96)
+ggsave(figura10, filename = "figura10.png", width = 25, height = 15, units = "cm", dpi = 96)
+
+```
+
+
+
+```{r, include=T, echo=F}
+
+ggplotly(figura9)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+           xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+ggplotly(figura10)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+      xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+
+```
+
+
+# ISSSTE
+
+```{r, include=F, warning=F, echo=F}
+
+
+recetas_issste <- read_excel("recetas_issste.xlsx", 
+                             col_types = c("text", "numeric", "numeric", 
+                                           "numeric", "numeric", "text", "numeric", 
+                                           "text"))
+
+
+
+  recetas_issste %>% 
+    filter(`OOAD/UMAE`%in% c("Nacional", "NACIONAL")) %>%
+    group_by(AÑO) %>% 
+    summarise(Surtidas=sum(SURTIDAS),
+              Parciales=sum(PARCIALES),
+              `Negadas`=sum(NEGADAS)) %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("Negadas",
+                        "Parciales",
+                        "Surtidas")) %>% 
+    filter(`TIPO DE RECETA` %in% c("Parciales", "Negadas")) %>%
+  ggplot(aes(x = AÑO, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  geom_text(aes(x=AÑO,
+                y=TOTAL,
+                label=comma(TOTAL)),
+            colour="white",
+            hjust=.5, vjust=-1)+
+  scale_y_continuous(labels = scales::comma) +  
+    scale_fill_manual(
+      values = c(Parciales = "#569bc7",
+                 Negadas = "#8d6eb5")) +  
+  labs(x="", y="Total de recetas", fill="")+
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        strip.text.y = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 0, hjust=.5, size=12, face="bold"),
+        axis.title.y = element_text(face = "bold"),
+        axis.text = element_text(size = 12, colour="black"))->figura11
+
+
+recetas_issste %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("TOTAL",
+                        "SURTIDAS",
+                        "PARCIALES",
+                        "NEGADAS"))->pivot_issste
+
+
+pivot_issste %>% 
+  group_by(AÑO) %>% 
+  filter(`OOAD/UMAE`%in% c("Nacional", "NACIONAL"),
+         !(`TIPO DE RECETA` %in% c("TOTAL", "SURTIDAS")),
+         #grepl("ALMACEN",`OOAD/UMAE` 
+  )%>%
+  mutate(MES=case_when(
+    MES=="ENERO"~"ene",
+    MES=="FEBRERO"~"feb",
+    MES=="MARZO"~"mar",
+    MES=="ABRIL"~"abr",
+    MES=="MAYO"~"may",
+    MES=="JUNIO"~"jun",
+    MES=="JULIO"~"jul",
+    MES=="AGOSTO"~"ago",
+    MES=="SEPTIEMBRE"~"sep",
+    MES=="OCTUBRE"~"oct",
+    MES=="NOVIEMBRE"~"nov",
+    MES=="DICIEMBRE"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic")),
+    `TIPO DE RECETA`= case_when(
+      `TIPO DE RECETA`=="PARCIALES"~"Parciales",
+      `TIPO DE RECETA`=="NEGADAS"~"Negadas")) %>% 
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  #scale_y_continuous(labels = scales::comma) +  
+  scale_fill_manual(
+    values = c(Negadas = "#8d6eb5",
+               Parciales = "#569bc7")) +  
+  labs(x="", y="", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="white", fill="#440154", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size=11),
+        axis.text = element_text(size = 11, colour="black"))-> figura12
+
+
+
+
+
+```
+
+
+```{r, include=F, warning=F, echo=F}
+
+ggsave(figura11, filename = "figura11.png", width = 25, height = 15, units = "cm", dpi = 96)
+ggsave(figura12, filename = "figura12.png", width = 25, height = 15, units = "cm", dpi = 96)
+write_excel_csv(cuadro_2, "cuadro_2.xls")
+
+```
+
+
+```{r, include=T, echo=F}
+
+ggplotly(figura11)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+           xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+ggplotly(figura12)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+      xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+
+```
+
+
+# SEDENA
+
+```{r, include=F, warning=F, echo=F}
+
+recetas_sedena <- read_excel("recetas_sedena.xlsx")
+
+recetas_sedena %>% 
+  group_by(AÑO) %>% 
+  summarise(Total=sum(Total),
+            `Surtidas completamente`=sum(Surtidas),
+            Parciales=sum(Parciales),
+            `No surtidas`=sum(Negadas))->cuadro_sedena
+
+
+recetas_sedena %>% 
+  group_by(AÑO) %>% 
+  summarise(`Surtidas completamente`=sum(Surtidas),
+            Parciales=sum(Parciales),
+            `Negadas`=sum(Negadas)) %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("Parciales", 
+                        "Negadas"))%>% 
+  ggplot(aes(x = AÑO, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  geom_text(aes(x=AÑO, y=TOTAL, 
+                label=comma((TOTAL))),
+            colour="white", size=4,
+            hjust=0.5, vjust=0,
+            position = position_stack(vjust = 0.5))+
+  scale_y_continuous(labels = scales::comma) +  
+  scale_fill_manual(
+    values = c(Parciales = "#5F55A0",
+               Negadas = "#998DDD")) +
+  labs(x="", y="", fill="")+
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 0, hjust=.5, size=12, face="bold"),
+        axis.text = element_text(size = 12, colour="black"))-> figura13
+
+
+
+recetas_sedena %>% 
+  group_by(AÑO, MES) %>% 
+  summarise(Total=sum(Total),
+            `Surtidas completamente`=sum(Surtidas),
+            Parciales=sum(Parciales),
+            `Negadas`=sum(Negadas)) %>% 
+pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("Total",
+                        "Surtidas completamente",
+                        "Parciales", 
+                        "Negadas"))%>% 
+  filter(`TIPO DE RECETA` %in% c("Parciales", "Negadas"))%>%
+  mutate(MES=case_when(
+    MES=="Enero"~"ene",
+    MES=="Febrero"~"feb",
+    MES=="Marzo"~"mar",
+    MES=="Abril"~"abr",
+    MES=="Mayo"~"may",
+    MES=="Junio"~"jun",
+    MES=="Julio"~"jul",
+    MES=="Agosto"~"ago",
+    MES=="Septiembre"~"sep",
+    MES=="Octubre"~"oct",
+    MES=="Noviembre"~"nov",
+    MES=="Diciembre"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic")))%>% 
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_y_continuous(labels = scales::comma) +  
+scale_fill_manual(
+    values = c(Parciales = "#5F55A0",
+               Negadas = "#998DDD")) + 
+  labs(x="", y="", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  
+theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 90, hjust=.5, size=12, face="bold"),
+        axis.text = element_text(size = 12, colour="black"))->figura14
+
+
+```
+
+```{r, include=F, warning=F, echo=F}
+
+ggsave(figura11, filename = "figura13.png", width = 25, height = 15, units = "cm", dpi = 96)
+ggsave(figura12, filename = "figura14.png", width = 25, height = 15, units = "cm", dpi = 96)
+write_excel_csv(cuadro_sedena, "cuadro_sedena.xls")
+
+```
+
+
+```{r, include=T, echo=F}
+
+ggplotly(figura13)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+           xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+ggplotly(figura14)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+      xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+
+```
+
+# Cardiología
+
+```{r, include=F, warning=F, echo=F}
+recetas_cardiología <- read_excel("recetas_cardiología.xlsx")
+
+recetas_cardiología %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("PRESENTADAS",
+                        "SURTIDAS TOTALMENTE",
+                        "SURTIDAS PARCIALMENTE"))->pivot_cardiología
+
+
+pivot_cardiología %>% 
+  group_by(AÑO) %>% 
+  filter(!(`TIPO DE RECETA` %in% c("PRESENTADAS", "SURTIDAS TOTALMENTE")))%>%
+  mutate(MES=case_when(
+    MES=="Enero"~"ene",
+    MES=="Febrero"~"feb",
+    MES=="Marzo"~"mar",
+    MES=="Abril"~"abr",
+    MES=="Mayo"~"may",
+    MES=="Junio"~"jun",
+    MES=="Julio"~"jul",
+    MES=="Agosto"~"ago",
+    MES=="Septiembre"~"sep",
+    MES=="Octubre"~"oct",
+    MES=="Noviembre"~"nov",
+    MES=="Diciembre"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic")),
+    `TIPO DE RECETA`=case_when(
+      `TIPO DE RECETA`== "SURTIDAS PARCIALMENTE" ~ "Parciales"))%>% 
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_y_continuous(labels = scales::comma, limits = c(0,4000)) +  
+  scale_fill_manual(
+    values = c(
+               `Parciales` = "#BC375D")) +  
+  labs(x="", y="", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="white", fill="#440154", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size=12),
+        axis.text = element_text(size = 12, colour="black"),
+        legend.text = element_text(size=11))
+
+
+recetas_cardiología %>% 
+  group_by(AÑO) %>% 
+  summarise(Presentadas=sum(PRESENTADAS),
+            Surtidas=sum(`SURTIDAS TOTALMENTE`),
+            Parciales=sum(`SURTIDAS PARCIALMENTE`))->cuadro_cardioloía
+
+write.csv(cuadro_cardioloía, "cuadro_cardiología.csv")
+
+
+```
+# Cancerología
+
+```{r, include=F, warning=F, echo=F}
+
+recetas_cancerología <- read_excel("recetas_cancerología.xlsx")
+
+recetas_cancerología %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("Presentadas",
+                        "Electrónicas"))%>% 
+  group_by(AÑO) %>% 
+  mutate(MES=case_when(
+    MES=="Enero"~"ene",
+    MES=="Febrero"~"feb",
+    MES=="Marzo"~"mar",
+    MES=="Abril"~"abr",
+    MES=="Mayo"~"may",
+    MES=="Junio"~"jun",
+    MES=="Julio"~"jul",
+    MES=="Agosto"~"ago",
+    MES=="Septiembre"~"sep",
+    MES=="Octubre"~"oct",
+    MES=="Noviembre"~"nov",
+    MES=="Diciembre"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic"))) %>% 
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_y_continuous(labels = scales::comma, limits = c(0,30000)) +  
+  scale_fill_manual(
+    values = c("Electrónicas"= "#FFB99D",
+               "Presentadas"= "#FF8A5C")) +  
+  labs(x="", y="", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="white", fill="#440154", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size=12),
+        axis.text = element_text(size = 12, colour="black"),
+        legend.text = element_text(size=12))
+
+
+recetas_cancerología %>% 
+  group_by(AÑO) %>% 
+  summarise(Surtidas=sum(Presentadas),
+            `Recetas electronicas`=sum(Electrónicas))->cuadro_cancer
+
+write.csv(cuadro_cancer, "cuadro_cancer.csv")
+
+
+
+```
+
+#Ciencias médicas y nutrición
+
+```{r, include=F, warning=F, echo=F}
+
+recetas_nutri <- read_excel("recetas_ciencias medicas y nutrición.xlsx")
+
+
+recetas_nutri %>% 
+  group_by(AÑO) %>% 
+  summarise(Total=sum(TOTAL),
+            `Surtidas`=sum(SURTIDAS),
+            Parciales=sum(PARCIALES),
+            Negadas=sum(NEGADAS))->cuadro_nutri
+
+
+
+recetas_nutri %>% 
+  group_by(AÑO) %>% 
+  summarise(`Surtidas completamente`=sum(SURTIDAS),
+            Parciales=sum(PARCIALES),
+            `Negadas`=sum(NEGADAS)) %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("Parciales", 
+                        "Negadas")) %>% 
+    ggplot(aes(x = AÑO, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  geom_text(aes(x=AÑO, 
+                y=TOTAL,
+                label=comma(TOTAL)),
+            colour="white",
+            hjust=.5, vjust=0.8)+
+  scale_y_continuous(labels = scales::comma) +  
+  scale_fill_manual(
+    values = c(Parciales = "#FD6D8C",
+               Negadas = "#d60927")) +  
+  labs(x="", y="Total de recetas", fill="")+
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        strip.text.y = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 0, hjust=.5, size=12, face="bold"),
+        axis.title.y = element_text(face = "bold"),
+        axis.text = element_text(size = 12, colour="black"))->figura15
+
+
+
+
+recetas_nutri %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("NEGADAS",
+                        "PARCIALES", 
+                        "TOTAL",
+                        "SURTIDAS")) %>% 
+  group_by(AÑO) %>% 
+  mutate(MES=case_when(
+    MES=="Enero"~"ene",
+    MES=="Febrero"~"feb",
+    MES=="Marzo"~"mar",
+    MES=="Abril"~"abr",
+    MES=="Mayo"~"may",
+    MES=="Junio"~"jun",
+    MES=="Julio"~"jul",
+    MES=="Agosto"~"ago",
+    MES=="Septiembre"~"sep",
+    MES=="Octubre"~"oct",
+    MES=="Noviembre"~"nov",
+    MES=="Diciembre"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic"))) %>% 
+  filter(`TIPO DE RECETA` %in% c("NEGADAS", "PARCIALES")) %>% 
+  mutate(`TIPO DE RECETA`= case_when(
+     `TIPO DE RECETA`== "NEGADAS" ~ "Negadas",
+     `TIPO DE RECETA`== "PARCIALES" ~ "Parciales"))%>%
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_y_continuous(labels = scales::comma) +  
+  scale_fill_manual(
+    values = c(Parciales = "#FD6D8C",
+               Negadas = "#d60927")) +  
+  labs(x="", y="Total de recetas", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        strip.text.y = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 90, hjust=.5, size=12, face="bold"),
+        axis.title.y = element_text(face = "bold"),
+        axis.text = element_text(size = 12, colour="black"))->figura16
+
+
+```
+
+
+```{r, include=F, warning=F, echo=F}
+
+ggsave(figura15, filename = "figura15.png", width = 25, height = 15, units = "cm", dpi = 96)
+ggsave(figura16, filename = "figura16.png", width = 25, height = 15, units = "cm", dpi = 96)
+write.csv(cuadro_nutri, "cuadro_nutri.csv")
+
+```
+
+
+#Perinatologia
+
+
+```{r, include=F, warning=F, echo=F}
+recetas_peri <- read_excel("recetas_perinatología.xlsx")
+
+recetas_peri %>% 
+  group_by(AÑO) %>% 
+  summarise(Total=sum(TOTAL),
+            `Surtidas completamente`=sum(COMPLETO),
+            Parciales=sum(PARCIAL),
+            `No surtidas`=sum(`NO SURTIDAS`))->cuadro_peri
+
+
+recetas_peri %>%
+  group_by(AÑO) %>% 
+  summarise(PARCIAL=sum(PARCIAL),
+            `NO SURTIDAS`=sum(`NO SURTIDAS`),
+            COMPLETO=sum(COMPLETO),
+            TOTAL=sum(TOTAL)) %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("NO SURTIDAS",
+                        "PARCIAL",
+                        "COMPLETO",
+                        "TOTAL"))%>%
+  group_by(AÑO) %>%
+  mutate(
+    `TIPO DE RECETA`=case_when(
+      `TIPO DE RECETA`=="PARCIAL"~"Parciales",
+      `TIPO DE RECETA`=="NO SURTIDAS"~"Negadas")) %>%
+  filter(`TIPO DE RECETA` %in% c("Parciales", "Negadas")) %>% 
+  ggplot(aes(x = AÑO,
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  geom_text(aes(x=AÑO,
+                y=TOTAL,
+                label=comma(TOTAL)),
+            colour="black",
+            hjust=.5, vjust=-1.5)+
+  scale_y_continuous(labels = scales::comma) +
+  scale_fill_manual(
+    values = c(Negadas = "#126e5b",
+               Parciales = "#45BFA7")) +
+  labs(x="", y="", fill="")+
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 0, hjust=.5, size=12, face="bold"),
+        axis.text = element_text(size = 12, colour="black"))->figura17
+  
+  
+  recetas_peri %>%
+    pivot_longer(names_to="TIPO DE RECETA",
+                 values_to ="TOTAL",
+                 cols = c("NO SURTIDAS",
+                          "PARCIAL",
+                          "COMPLETO",
+                          "TOTAL"))%>%
+  group_by(AÑO) %>%
+  mutate(MES=case_when(
+    MES=="Enero"~"ene",
+    MES=="Febrero"~"feb",
+    MES=="Marzo"~"mar",
+    MES=="Abril"~"abr",
+    MES=="Mayo"~"may",
+    MES=="Junio"~"jun",
+    MES=="Julio"~"jul",
+    MES=="Agosto"~"ago",
+    MES=="Septiembre"~"sep",
+    MES=="Octubre"~"oct",
+    MES=="Noviembre"~"nov",
+    MES=="Diciembre"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic")),
+    `TIPO DE RECETA`=case_when(
+      `TIPO DE RECETA`=="PARCIAL"~"Parciales",
+      `TIPO DE RECETA`=="NO SURTIDAS"~"Negadas")) %>%
+    filter(`TIPO DE RECETA` %in% c("Parciales", "Negadas")) %>% 
+  ggplot(aes(x = MES,
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_y_continuous(labels = scales::comma, limits = c(0,500)) +
+  scale_fill_manual(
+    values = c(Negadas = "#0C5849",
+               Parciales = "#45BFA7")) +
+  labs(x="", y="Total de recetas", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+    theme_minimal() +
+    theme(legend.position = "bottom")+
+    theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+          strip.placement = 'outside',
+          strip.background.x = element_blank(),
+          strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+    theme(panel.grid.minor.x = element_blank(),
+          panel.spacing.x = unit(0,"line")) +
+    theme(axis.text.x = element_text(angle = 90, hjust=.5, size=12, face="bold"),
+          axis.text = element_text(size = 12, colour="black"),
+          axis.title.y = element_text(face = "bold", size=12),
+          legend.text=element_text(size=13))->figura18
+  
+```
+
+
+```{r, include=F, warning=F, echo=F}
+ggsave(figura17, filename = "figura17.png", width = 25, height = 15, units = "cm", dpi = 96)
+ggsave(figura18, filename = "figura18.png", width = 25, height = 15, units = "cm", dpi = 96)
+write.csv(cuadro_peri, "cuadro_peri.csv")
+```
+
+#Psiquiatría
+```{r, include=F, warning=F, echo=F}
+recetas_psiq <- read_excel("recetas_psiquiatría.xlsx")
+
+recetas_psiq %>% 
+  group_by(AÑO) %>% 
+  summarise(Total=sum(`TOTAL RECETAS EMITIDAS`),
+            `Surtidas completamente`=sum(`RECETAS COMPLETAMENTE SURTIDAS`),
+            Parciales=sum(`RECETAS PARCIALMENTE SURTIDAS`),
+            `No surtidas`=sum(`RECETAS NO SURTIDAS`))->cuadro_psiq
+
+write.csv(cuadro_psiq, "cuadro_psiq.csv")
+```
+
+# Hospital Regional de Alta Especialidad del Bajío
+
+```{r, include=F, warning=F, echo=F}
+recetas_hae <- read_excel("recetas_hosp especialidad bajío.xlsx")
+
+recetas_hae %>% 
+  group_by(AÑO) %>% 
+  summarise(SURTIDAS=sum(SURTIDAS),
+            PARCIALES=sum(PARCIALES),
+            NEGADAS=sum(NEGADAS)) %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c(
+                        "SURTIDAS",
+                        "PARCIALES", 
+                        "NEGADAS"))%>% 
+  filter(`TIPO DE RECETA` %in% c("PARCIALES", "NEGADAS")) %>%
+  group_by(AÑO) %>% 
+  mutate(
+    `TIPO DE RECETA`=case_when(
+      `TIPO DE RECETA`=="PARCIALES"~ "Parciales",
+      `TIPO DE RECETA`=="NEGADAS"~ "Negadas")) %>% 
+  ggplot(aes(x = AÑO, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  geom_text(aes(x=AÑO, 
+                y=TOTAL,
+                label=comma(TOTAL, accuracy = 1)),
+            colour="white", position=position_stack(.8),
+            hjust=.5, vjust=0.9)+
+  scale_fill_manual(
+    values = c(Parciales = "#351c75",
+               Negadas = "#5a8cff")) +  
+  labs(x="", y="Total de recetas", fill="")+
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 0, hjust=.5, size=12, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=12),
+        legend.text=element_text(size=13))->figura19
+
+
+recetas_hae %>% 
+  pivot_longer(names_to="TIPO DE RECETA",
+               values_to ="TOTAL",
+               cols = c("TOTAL",
+                        "SURTIDAS",
+                        "PARCIALES", 
+                        "NEGADAS"))%>% 
+  filter(`TIPO DE RECETA` %in% c("PARCIALES", "NEGADAS")) %>%
+  
+  group_by(AÑO) %>% 
+  mutate(MES=case_when(
+    MES=="Enero"~"ene",
+    MES=="Febrero"~"feb",
+    MES=="Marzo"~"mar",
+    MES=="Abril"~"abr",
+    MES=="Mayo"~"may",
+    MES=="Junio"~"jun",
+    MES=="Julio"~"jul",
+    MES=="Agosto"~"ago",
+    MES=="Septiembre"~"sep",
+    MES=="Octubre"~"oct",
+    MES=="Noviembre"~"nov",
+    MES=="Diciembre"~"dic"),
+    MES=factor(MES,
+               levels=c("ene", "feb", "mar","abr", "may", "jun",
+                        "jul", "ago", "sep","oct", "nov", "dic")),
+    `TIPO DE RECETA`=case_when(
+      `TIPO DE RECETA`=="PARCIALES"~ "Parciales",
+      `TIPO DE RECETA`=="NEGADAS"~ "Negadas")) %>% 
+  ggplot(aes(x = MES, 
+             y = TOTAL,
+             fill= `TIPO DE RECETA`)) +
+  geom_col()+
+  scale_fill_manual(
+    values = c(Parciales = "#351c75",
+               Negadas = "#5a8cff")) +  
+  labs(x="", y="Total de recetas", fill="")+
+  facet_grid(.~ AÑO, space = 'free_x', scales = 'free_x', switch = 'x') +
+  theme_minimal() +
+  theme(legend.position = "bottom")+
+  theme(strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0))+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line")) +
+  theme(axis.text.x = element_text(angle = 90, hjust=.5, size=12, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=12),
+        legend.text=element_text(size=13))->figura20
+
+```
+
+```{r, include=F, warning=F, echo=F}
+ggsave(figura19, filename = "figura19.png", width = 25, height = 15, units = "cm", dpi = 96)
+ggsave(figura20, filename = "figura20.png", width = 25, height = 15, units = "cm", dpi = 96)
+write.csv(cuadro_hae, "cuadro_hae.csv")
+```
