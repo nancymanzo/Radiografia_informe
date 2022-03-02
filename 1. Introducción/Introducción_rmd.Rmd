@@ -1,0 +1,239 @@
+---
+title: "Introducción"
+author: "Cero Desabasto"
+date: "2/3/2022"
+output: html_document
+---
+
+```{r, include=F, warning=F, echo=F}
+library(readxl)
+library(viridis)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(tidyverse)
+library(DT)
+library(plotly)
+```
+
+
+```{r, include=F, warning=F, echo=F}
+
+inegi_censo <- read_excel("C:/Users/Lenovo/Desktop/GIT/1. Introducción/Archivos de datos/datos_introducción.xlsx", sheet="Hoja1")
+
+
+inegi_censo %>%
+  ggplot( 
+    aes(x = reorder(`Afiliación según instancia`, -Total),
+        y= Total,
+        fill = `Afiliación según instancia`)) +
+  geom_col() +
+  geom_text(aes(x=`Afiliación según instancia`, 
+                y=Total,
+                label=comma((Total))),
+            colour="#454243",
+            hjust=.5, vjust=-1, size=5)+
+  scale_fill_manual(
+    values = c(IMSS = "#2ac9ba",
+               `IMSS Bienestar` = "#2ac9ba",
+               INSABI = "#2ac9ba",
+               ISSSTE = "#2ac9ba",
+               `ISSSTE estatal` = "#2ac9ba",
+               `Otros` = "#2ac9ba",
+               `Pemex, Defensa o Marina` = "#2ac9ba",
+               Privados = "#2ac9ba",
+               `Sin afiliación` = "#8241cc")) +
+  scale_y_continuous(labels = scales::comma) +  
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 16)) +
+  labs(x="", y="Población según condición de afiliación")+
+  theme_minimal() +
+  theme(legend.position = "none",
+        strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 15, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 0, hjust=.5, size=15, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=14)) -> figura1
+
+ggsave(figura1, filename = "figura1.png", width = 40, height = 25, units = "cm", dpi = 100)
+
+```
+
+
+
+```{r, include=F, warning=F, echo=F}
+
+inegi_censo_2 <- read_excel("C:/Users/Lenovo/Desktop/GIT/1. Introducción/Archivos de datos/datos_introducción.xlsx", sheet="Hoja2")
+
+ggplot(inegi_censo_2) +
+  aes(x = Año, y = Total, colour = Tipo) +
+  geom_line(size = 3.5) +
+  geom_point(size=5)+
+  scale_color_manual(
+    values = c(Cirugías = "#28B7B5",
+               Consultas = "#901CB7",
+               `Egresos hospitalarios` = "#ED4685",
+               `Personas indígenas atendidas` = "#44C447",
+               `Métodos entregados de planificación familiar` = "#E27518")) + 
+  scale_y_continuous(labels = scales::comma) +  
+  labs(x="", y="Total de atenciones", colour="")+
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.box="vertical", legend.margin=margin(),
+        strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"), 
+        axis.text.x = element_text(angle = 0, hjust=.5, size=13, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=14),
+        legend.text=element_text(size=16))+
+  guides(color = guide_legend(ncol = 2, byrow = TRUE))->figura2
+
+
+ggsave(figura2, filename = "figura2.png", width = 35, height = 25, units = "cm", dpi = 100)
+
+```
+
+
+```{r, include=F, warning=F, echo=F}
+
+inegi_censo_3 <- read_excel("C:/Users/Lenovo/Desktop/GIT/1. Introducción/Archivos de datos/datos_introducción.xlsx", 
+                            sheet = "Hoja3")
+
+--------------------------------------------------------------------------------
+
+inegi_censo_3 %>%
+  filter(Procedimiento %in% c("Tamizaje Neonatal", 
+                              "Inyección o infusión de otra sustancia terapéutica o profiláctica")) %>%
+  ggplot() +
+  aes(x = Procedimiento, fill =as.factor(Año), weight = Total) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(
+    values = c(`2017` = "#28B7A6",
+               `2018` = "#A32BCB",
+               `2019` = "#E64A6D",
+               `2020` = "#F6811D",
+               `2021` = "#63C942")) +
+  scale_y_continuous(labels = scales::comma) +  
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20)) +
+  labs(x="", y="", fill="")+
+  theme_minimal() +
+  theme(legend.position = "none",
+        strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 0, hjust=.5, size=15, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=14),
+        legend.text=element_text(size=13))->p1
+
+--------------------------------------------------------------------------------
+
+inegi_censo_3 %>%
+  filter(Procedimiento %in% c("Inyección o infusión de sustancia quimioterapéutica contra cáncer", 
+                              "Colecistectomía",
+                              "Diálisis peritoneal")) %>%
+  ggplot() +
+  aes(x = Procedimiento, fill =as.factor(Año), weight = Total) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(
+    values = c(`2017` = "#28B7A6",
+               `2018` = "#A32BCB",
+               `2019` = "#E64A6D",
+               `2020` = "#F6811D",
+               `2021` = "#63C942")) +
+  scale_y_continuous(labels = scales::comma) + 
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 17)) +
+  labs(x="", y="", fill="")+
+  theme_minimal() +
+  theme(legend.position = "none",
+        strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 0, hjust=.5, size=15, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=14),
+        legend.text=element_text(size=13))->p2
+
+--------------------------------------------------------------------------------
+
+inegi_censo_3 %>%
+  filter(Procedimiento %in% c("Inserción de prótesis de cristalino intraocular en el momento de la extracción de la catarata", 
+                              "Prostatectomía transuretral",
+                              "Trasplante de riñon")) %>%
+  ggplot() +
+  aes(x = Procedimiento, fill =as.factor(Año), weight = Total) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(
+    values = c(`2017` = "#28B7A6",
+               `2018` = "#A32BCB",
+               `2019` = "#E64A6D",
+               `2020` = "#F6811D",
+               `2021` = "#63C942")) +
+  scale_y_continuous(labels = scales::comma) +  
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 20)) +
+  labs(x="", y="", fill="")+
+  theme_minimal() +
+  theme(legend.position = "right",
+        strip.background = element_rect(color="black", fill="white", size=1.5),
+        strip.placement = 'outside',
+        strip.background.x = element_blank(),
+        strip.text.x = element_text(size = 12, face = "bold", angle=0),
+        panel.grid.minor.x = element_blank(),
+        panel.spacing.x = unit(0,"line"),
+        axis.text.x = element_text(angle = 0, hjust=.5, size=15, face="bold"),
+        axis.text = element_text(size = 12, colour="black"),
+        axis.title.y = element_text(face = "bold", size=14),
+        legend.text=element_text(size=13))->p3
+--------------------------------------------------------------------------------
+
+ggsave(p1, filename = "p1.png", width = 35, height = 25, units = "cm", dpi = 100)
+ggsave(p2, filename = "p2.png", width = 35, height = 25, units = "cm", dpi = 100)
+ggsave(p3, filename = "p3.png", width = 35, height = 25, units = "cm", dpi = 100)
+
+
+library(patchwork)
+p1 - p2 - p3 + plot_layout(ncol=1)->figura3
+
+ggsave(figura3, filename = "figura3.png", width = 40, height = 25, units = "cm", dpi = 100)
+
+
+
+```
+
+
+
+
+
+```{r, include=T, echo=F}
+
+ggplotly(figura1)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+           xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+ggplotly(figura2)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+      xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+
+ggplotly(figura3)%>% 
+    layout(legend = list(orientation = 'v', 
+                  x = 0, y = -1), 
+      xaxis = list(side = "bottom"),legend = list(side="bottom"))
+
+```
+
+
